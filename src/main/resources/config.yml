@@ -1,0 +1,42 @@
+# Настройки TimeReward плагина
+
+settings:
+  # Интервал проверки в секундах (рекомендуется 60-300)
+  check-interval: 60
+  currencies:
+    coins:
+      reward-interval: 60 # Интервал награды в минутах (рекомендуется 10-60)
+      reward-default: 1.0
+    money:
+      reward-interval: 30 # Интервал награды в минутах (рекомендуется 10-60)
+      reward-default: 30.0
+  # Проверять AFK статус (требует Essentials)
+  require-afk-check: true
+  # Оповещать всех игроков о наградах
+  broadcast-rewards: false
+
+messages:
+  # Сообщение при получении награды
+  reward-message: "&aВы получили &6{amount} {currency} &aза время на сервере!"
+  # Доступные плейсхолдеры: {amount}, {currency}, {player}
+
+# Система пермишенов:
+# timereward.coins.1 - выдавать 1 коин в час
+# timereward.money.75 - выдавать 75$  пол часа
+# timereward.admin - админские права
+
+# Пример групп для LuckPerms:
+#
+# Группа VIP:
+#   permissions:
+#   - timereward.coins.1
+#   - timereward.money.150
+#
+# Группа Premium:
+#   permissions:
+#   - timereward.coins.1
+#   - timereward.money.200
+#
+# Группа Legend:
+#   permissions:
+#   - timereward.coins.2

@@ -1,0 +1,33 @@
+name: TimeReward
+version: 1.1.0
+main: com.flyaway.timereward.TimeReward
+api-version: 1.21
+author: FlyAwayMaking
+website: https://github.com/flyawaymaking
+description: Выдаёт награды игрокам за время на сервере, а также отслеживает их активное время игры
+depend: [Essentials, CoinsEngine]
+
+commands:
+  timereward:
+    description: Управление плагином TimeReward
+    usage: /<command> [reload|stats|help]
+    permission: timereward.admin
+
+permissions:
+  timereward.*:
+    description: Все permissions TimeReward
+    children:
+      timereward.coins.*: true
+      timereward.money.*: true
+      timereward.admin: true
+  timereward.coins.*:
+    description: Число выдаваемых коинов
+    children:
+      timereward.coins.1: true
+  timereward.money.*:
+    description: Число выдаваемых денег
+    children:
+      timereward.money.30: true
+  timereward.admin:
+    description: Админские права TimeReward
+    default: op
