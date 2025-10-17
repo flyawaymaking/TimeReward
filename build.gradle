@@ -1,5 +1,6 @@
 plugins {
     id 'java'
+    id 'maven-publish'
 }
 
 group = 'com.flyaway.timereward'
@@ -26,4 +27,12 @@ dependencies {
 
 tasks.jar {
     archiveBaseName.set("TimeReward")
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            from components.java
+        }
+    }
 }

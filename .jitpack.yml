@@ -1,0 +1,7 @@
+# .jitpack.yml
+jdk:
+  - openjdk21
+before_install:
+  - chmod +x gradlew
+install:
+  - ./gradlew publishToMavenLocal
