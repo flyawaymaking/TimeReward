@@ -12,7 +12,9 @@ import org.bukkit.permissions.PermissionAttachmentInfo;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.*;
+import java.util.UUID;
+import java.util.Map;
+import java.util.HashMap;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class TimeReward extends JavaPlugin {
@@ -240,28 +242,33 @@ public class TimeReward extends JavaPlugin {
         if (requireAfkCheck && isAfk(player)) return;
 
         UUID playerId = player.getUniqueId();
-        long currentTime = System.currentTimeMillis() / 1000;
+
+        // ОБНОВЛЯЕМ время сессии перед проверкой наград
+        playerListener.updatePlayerSessionTime(playerId);
+
         PlayerData data = playerDataMap.get(playerId);
         if (data == null) return;
 
         for (CurrencyConfig currencyConfig : currencyConfigs.values()) {
-            checkCurrencyReward(player, data, currentTime, currencyConfig);
+            checkCurrencyReward(player, data, currencyConfig);
         }
     }
 
-    private void checkCurrencyReward(Player player, PlayerData data, long currentTime, CurrencyConfig currencyConfig) {
-        Long lastRewardTime = data.getLastRewardTime(currencyConfig.getCurrencyId());
-        if (lastRewardTime == null) {
-            lastRewardTime = currentTime;
-            data.setLastRewardTime(currencyConfig.getCurrencyId(), currentTime);
+    private void checkCurrencyReward(Player player, PlayerData data, CurrencyConfig currencyConfig) {
+        Long lastRewardPlayTime = data.getLastRewardTime(currencyConfig.getCurrencyId());
+        if (lastRewardPlayTime == null) {
+            // Первая награда - устанавливаем текущее игровое время как точку отсчета
+            lastRewardPlayTime = data.getTotalTime();
+            data.setLastRewardTime(currencyConfig.getCurrencyId(), lastRewardPlayTime);
         }
 
-        long timeSinceLastReward = currentTime - lastRewardTime;
-        if (timeSinceLastReward >= currencyConfig.getRewardInterval()) {
+        long playTimeSinceLastReward = data.getTotalTime() - lastRewardPlayTime;
+        if (playTimeSinceLastReward >= currencyConfig.getRewardInterval()) {
             double amount = getRewardAmount(player, currencyConfig.getCurrencyId());
             if (amount > 0) {
                 giveReward(player, amount, currencyConfig.getCurrencyId());
-                data.setLastRewardTime(currencyConfig.getCurrencyId(), currentTime);
+                // Устанавливаем текущее игровое время как новую точку отсчета
+                data.setLastRewardTime(currencyConfig.getCurrencyId(), data.getTotalTime());
             }
         }
     }
@@ -320,13 +327,16 @@ public class TimeReward extends JavaPlugin {
         }
     }
 
+    public boolean isRequireAfkCheck() {
+        return requireAfkCheck;
+    }
+
     public PlayerData getPlayerData(UUID uuid) {
         return playerDataMap.get(uuid);
     }
 
     public PlayerData getOrCreatePlayerData(UUID uuid) {
         return playerDataMap.computeIfAbsent(uuid, k -> {
-            long currentTime = System.currentTimeMillis() / 1000;
             return new PlayerData(0, 0, new HashMap<>());
         });
     }

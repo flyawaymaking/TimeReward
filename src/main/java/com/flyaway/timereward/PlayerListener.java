@@ -79,6 +79,11 @@ public class PlayerListener implements Listener {
 
     @EventHandler
     public void onAfkStatusChange(AfkStatusChangeEvent event) {
+        // Если AFK проверка отключена, игнорируем событие
+        if (!this.plugin.isRequireAfkCheck()) {
+            return;
+        }
+
         Player player = event.getAffected().getBase();
         UUID playerId = player.getUniqueId();
         boolean isAfk = event.getValue(); // true = стал AFK, false = перестал быть AFK
