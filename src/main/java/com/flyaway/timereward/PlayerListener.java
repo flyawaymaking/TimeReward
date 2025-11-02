@@ -25,7 +25,7 @@ public class PlayerListener implements Listener {
         for (Player player : Bukkit.getOnlinePlayers()) {
             UUID playerId = player.getUniqueId();
 
-            // Инициализируем данные игрока если их нет
+            // Загружаем данные игрока в память
             plugin.getOrCreatePlayerData(playerId);
 
             // Добавляем в joinTimes только если игрок не в AFK
@@ -44,10 +44,12 @@ public class PlayerListener implements Listener {
         Player player = event.getPlayer();
         UUID playerId = player.getUniqueId();
 
+        // Загружаем данные игрока в память
+        plugin.getOrCreatePlayerData(playerId);
+
         // Запоминаем время входа
         joinTimes.put(playerId, System.currentTimeMillis() / 1000);
 
-        plugin.getOrCreatePlayerData(playerId);
         plugin.getLogger().info("Данные загружены для игрока: " + player.getName());
     }
 
@@ -59,8 +61,11 @@ public class PlayerListener implements Listener {
         updatePlayerSessionTime(playerId); // Обновляем время при выходе
         joinTimes.remove(playerId); // Удаляем из карты сессий
 
+        // Сохраняем данные и удаляем из памяти
         plugin.savePlayerData(playerId);
-        plugin.getLogger().info("Данные сохранены при выходе игрока: " + player.getName());
+        plugin.removePlayerDataFromMemory(playerId);
+
+        plugin.getLogger().info("Данные сохранены и удалены из памяти для игрока: " + player.getName());
     }
 
     // Метод для обновления времени сессии
