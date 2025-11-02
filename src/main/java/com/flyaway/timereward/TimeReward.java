@@ -15,7 +15,6 @@ import java.io.IOException;
 import java.util.UUID;
 import java.util.Map;
 import java.util.HashMap;
-import java.util.concurrent.ConcurrentHashMap;
 
 public class TimeReward extends JavaPlugin {
 
@@ -33,6 +32,7 @@ public class TimeReward extends JavaPlugin {
     private String rewardMessage;
     private BukkitTask rewardTimerTask;
     private BukkitTask saveTask;
+    private boolean debug;
 
     public static class CurrencyConfig {
         private final long rewardInterval;
@@ -58,7 +58,6 @@ public class TimeReward extends JavaPlugin {
         saveDefaultConfig();
         setupDataFile();
 
-        // ПЕРВОЕ: инициализируем coinsEngine
         coinsEngine = new CoinsEngineHook(this);
         if (!coinsEngine.setupCoinsEngine()) {
             getLogger().severe("CoinsEngine не найден! Плагин будет отключен.");
@@ -66,13 +65,10 @@ public class TimeReward extends JavaPlugin {
             return;
         }
 
-        // ВТОРОЕ: загружаем конфиг (теперь coinsEngine доступен)
         loadConfig();
 
-        playerDataMap = new ConcurrentHashMap<>();
-        loadPlayerData();
+        playerDataMap = new HashMap<>();
 
-        // Остальной код без изменений...
         essentials = getServer().getPluginManager().getPlugin("Essentials");
         if (essentials == null) {
             getLogger().warning("EssentialsX не найден, AFK проверка отключена");
@@ -119,6 +115,7 @@ public class TimeReward extends JavaPlugin {
         checkInterval = config.getLong("settings.check-interval", 60) * 20L;
         requireAfkCheck = config.getBoolean("settings.require-afk-check", true);
         broadcastRewards = config.getBoolean("settings.broadcast-rewards", false);
+        debug = config.getBoolean("debug", false);
         rewardMessage = ChatColor.translateAlternateColorCodes('&',
             config.getString("messages.reward-message", "&aВы получили &6{amount} {currency} &aза время на сервере!"));
 
@@ -147,69 +144,48 @@ public class TimeReward extends JavaPlugin {
         getLogger().info("Конфигурация плагина перезагружена");
     }
 
-    private void loadPlayerData() {
-        if (!dataConfig.contains("players")) {
-            getLogger().info("Файл данных игроков пуст");
-            return;
-        }
-
-        int loadedCount = 0;
-        for (String key : dataConfig.getConfigurationSection("players").getKeys(false)) {
-            try {
-                UUID uuid = UUID.fromString(key);
-                String basePath = "players." + key + ".";
-
-                Map<String, Long> lastRewardTimes = new HashMap<>();
-                if (dataConfig.contains(basePath + "lastRewardTimes")) {
-                    for (String currency : dataConfig.getConfigurationSection(basePath + "lastRewardTimes").getKeys(false)) {
-                        lastRewardTimes.put(currency, dataConfig.getLong(basePath + "lastRewardTimes." + currency));
-                    }
-                }
-
-                PlayerData data = new PlayerData(
-                    dataConfig.getLong(basePath + "totalTime", 0),
-                    dataConfig.getLong(basePath + "periodTime", 0),
-                    lastRewardTimes
-                );
-
-                playerDataMap.put(uuid, data);
-                loadedCount++;
-            } catch (IllegalArgumentException e) {
-                getLogger().warning("Неверный UUID в файле данных: " + key);
-            }
-        }
-        getLogger().info("Загружены данные для " + loadedCount + " игроков");
-    }
-
     public PlayerListener getPlayerListener() {
         return playerListener;
     }
 
     public void savePlayersData() {
-        dataConfig.set("players", null);
-        for (Map.Entry<UUID, PlayerData> entry : playerDataMap.entrySet()) {
-            savePlayerData(entry.getKey());
+        synchronized (playerDataMap) {
+            for (Map.Entry<UUID, PlayerData> entry : playerDataMap.entrySet()) {
+                savePlayerDataToFile(entry.getKey(), entry.getValue());
+            }
         }
-        getLogger().info("Данные всех игроков сохранены");
+        if (debug) getLogger().info("Данные всех онлайн игроков сохранены");
     }
 
     public void savePlayerData(UUID uuid) {
-        PlayerData data = playerDataMap.get(uuid);
-        if (data != null) {
-            String basePath = "players." + uuid.toString() + ".";
-            dataConfig.set(basePath + "totalTime", data.getTotalTime());
-            dataConfig.set(basePath + "periodTime", data.getPeriodTime());
-
-            dataConfig.set(basePath + "lastRewardTimes", null);
-            for (Map.Entry<String, Long> entry : data.getLastRewardTimes().entrySet()) {
-                dataConfig.set(basePath + "lastRewardTimes." + entry.getKey(), entry.getValue());
+        synchronized (playerDataMap) {
+            PlayerData data = playerDataMap.get(uuid);
+            if (data != null) {
+                savePlayerDataToFile(uuid, data);
             }
+        }
+    }
 
-            try {
-                dataConfig.save(dataFile);
-            } catch (IOException e) {
-                getLogger().severe("Ошибка при сохранении данных игрока " + uuid + ": " + e.getMessage());
-            }
+    private void savePlayerDataToFile(UUID uuid, PlayerData data) {
+        String basePath = "players." + uuid.toString() + ".";
+        dataConfig.set(basePath + "totalTime", data.getTotalTime());
+        dataConfig.set(basePath + "periodTime", data.getPeriodTime());
+
+        dataConfig.set(basePath + "lastRewardTimes", null);
+        for (Map.Entry<String, Long> entry : data.getLastRewardTimes().entrySet()) {
+            dataConfig.set(basePath + "lastRewardTimes." + entry.getKey(), entry.getValue());
+        }
+
+        try {
+            dataConfig.save(dataFile);
+        } catch (IOException e) {
+            getLogger().severe("Ошибка при сохранении данных игрока " + uuid + ": " + e.getMessage());
+        }
+    }
+
+    public void removePlayerDataFromMemory(UUID uuid) {
+        synchronized (playerDataMap) {
+            playerDataMap.remove(uuid);
         }
     }
 
@@ -331,51 +307,158 @@ public class TimeReward extends JavaPlugin {
         return requireAfkCheck;
     }
 
+    public boolean isDebug() {
+        return debug;
+    }
+
     public PlayerData getPlayerData(UUID uuid) {
-        return playerDataMap.get(uuid);
+        synchronized (playerDataMap) {
+            return playerDataMap.get(uuid);
+        }
     }
 
     public PlayerData getOrCreatePlayerData(UUID uuid) {
-        return playerDataMap.computeIfAbsent(uuid, k -> {
+        synchronized (playerDataMap) {
+            return playerDataMap.computeIfAbsent(uuid, k -> {
+                // Загружаем данные из файла только при первом обращении
+                return loadPlayerDataFromFile(uuid);
+            });
+        }
+    }
+
+    private PlayerData loadPlayerDataFromFile(UUID uuid) {
+        String basePath = "players." + uuid.toString() + ".";
+
+        if (!dataConfig.contains(basePath + "totalTime")) {
+            // Если данных нет в файле, создаем новые
             return new PlayerData(0, 0, new HashMap<>());
-        });
+        }
+
+        Map<String, Long> lastRewardTimes = new HashMap<>();
+        if (dataConfig.contains(basePath + "lastRewardTimes")) {
+            for (String currency : dataConfig.getConfigurationSection(basePath + "lastRewardTimes").getKeys(false)) {
+                lastRewardTimes.put(currency, dataConfig.getLong(basePath + "lastRewardTimes." + currency));
+            }
+        }
+
+        return new PlayerData(
+            dataConfig.getLong(basePath + "totalTime", 0),
+            dataConfig.getLong(basePath + "periodTime", 0),
+            lastRewardTimes
+        );
     }
 
     // API методы
     public Map<UUID, Long> getAllPlayersTotalTime() {
         Map<UUID, Long> result = new HashMap<>();
-        for (Map.Entry<UUID, PlayerData> entry : playerDataMap.entrySet()) {
-            result.put(entry.getKey(), entry.getValue().getTotalTime());
+
+        // Сначала добавляем онлайн игроков из памяти
+        synchronized (playerDataMap) {
+            for (Map.Entry<UUID, PlayerData> entry : playerDataMap.entrySet()) {
+                result.put(entry.getKey(), entry.getValue().getTotalTime());
+            }
+        }
+
+        // Затем добавляем офлайн игроков из файла
+        if (dataConfig.contains("players")) {
+            for (String key : dataConfig.getConfigurationSection("players").getKeys(false)) {
+                try {
+                    UUID uuid = UUID.fromString(key);
+                    // Добавляем только если игрок не онлайн
+                    if (!result.containsKey(uuid)) {
+                        String basePath = "players." + key + ".";
+                        long totalTime = dataConfig.getLong(basePath + "totalTime", 0);
+                        result.put(uuid, totalTime);
+                    }
+                } catch (IllegalArgumentException e) {
+                    getLogger().warning("Неверный UUID в файле данных: " + key);
+                }
+            }
         }
         return result;
     }
 
     public Map<UUID, Long> getAllPlayersPeriodTime() {
         Map<UUID, Long> result = new HashMap<>();
-        for (Map.Entry<UUID, PlayerData> entry : playerDataMap.entrySet()) {
-            result.put(entry.getKey(), entry.getValue().getPeriodTime());
+
+        // Сначала добавляем онлайн игроков из памяти
+        synchronized (playerDataMap) {
+            for (Map.Entry<UUID, PlayerData> entry : playerDataMap.entrySet()) {
+                result.put(entry.getKey(), entry.getValue().getPeriodTime());
+            }
+        }
+
+        // Затем добавляем офлайн игроков из файла
+        if (dataConfig.contains("players")) {
+            for (String key : dataConfig.getConfigurationSection("players").getKeys(false)) {
+                try {
+                    UUID uuid = UUID.fromString(key);
+                    // Добавляем только если игрок не онлайн
+                    if (!result.containsKey(uuid)) {
+                        String basePath = "players." + key + ".";
+                        long periodTime = dataConfig.getLong(basePath + "periodTime", 0);
+                        result.put(uuid, periodTime);
+                    }
+                } catch (IllegalArgumentException e) {
+                    getLogger().warning("Неверный UUID в файле данных: " + key);
+                }
+            }
         }
         return result;
     }
 
     public void resetAllPlayersPeriodTime() {
+        // Сохраняем текущие данные онлайн игроков
+        savePlayersData();
+
+        // Сбрасываем периодическое время для онлайн игроков в памяти
         synchronized (playerDataMap) {
             for (PlayerData data : playerDataMap.values()) {
                 data.setPeriodTime(0);
             }
-            savePlayersData();
         }
+
+        // Сбрасываем периодическое время для всех игроков в файле
+        if (dataConfig.contains("players")) {
+            for (String key : dataConfig.getConfigurationSection("players").getKeys(false)) {
+                dataConfig.set("players." + key + ".periodTime", 0);
+            }
+            try {
+                dataConfig.save(dataFile);
+            } catch (IOException e) {
+                getLogger().severe("Ошибка при сбросе периодического времени: " + e.getMessage());
+            }
+        }
+
         getLogger().info("Периодическое время всех игроков сброшено");
     }
 
     public long getPlayerTotalTime(UUID uuid) {
-        PlayerData data = playerDataMap.get(uuid);
-        return data != null ? data.getTotalTime() : 0;
+        // Сначала проверяем в памяти (если игрок онлайн)
+        synchronized (playerDataMap) {
+            PlayerData data = playerDataMap.get(uuid);
+            if (data != null) {
+                return data.getTotalTime();
+            }
+        }
+
+        // Если не в памяти, загружаем из файла
+        String basePath = "players." + uuid.toString() + ".";
+        return dataConfig.getLong(basePath + "totalTime", 0);
     }
 
     public long getPlayerPeriodTime(UUID uuid) {
-        PlayerData data = playerDataMap.get(uuid);
-        return data != null ? data.getPeriodTime() : 0;
+        // Сначала проверяем в памяти (если игрок онлайн)
+        synchronized (playerDataMap) {
+            PlayerData data = playerDataMap.get(uuid);
+            if (data != null) {
+                return data.getPeriodTime();
+            }
+        }
+
+        // Если не в памяти, загружаем из файла
+        String basePath = "players." + uuid.toString() + ".";
+        return dataConfig.getLong(basePath + "periodTime", 0);
     }
 
     public CurrencyConfig getCurrencyConfig(String currencyType) {

@@ -1,5 +1,7 @@
 # Настройки TimeReward плагина
 
+debug: false
+
 settings:
   # Интервал проверки в секундах (рекомендуется 60-300)
   check-interval: 60

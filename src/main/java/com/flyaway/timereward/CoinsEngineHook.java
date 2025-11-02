@@ -1,15 +1,14 @@
 package com.flyaway.timereward;
 
 import org.bukkit.entity.Player;
-import org.bukkit.plugin.java.JavaPlugin;
 import su.nightexpress.coinsengine.api.CoinsEngineAPI;
 import su.nightexpress.coinsengine.api.currency.Currency;
 
 public class CoinsEngineHook {
-    private JavaPlugin plugin;
+    private TimeReward plugin;
     private boolean enabled = false;
 
-    public CoinsEngineHook(JavaPlugin plugin) {
+    public CoinsEngineHook(TimeReward plugin) {
         this.plugin = plugin;
     }
 
@@ -35,7 +34,7 @@ public class CoinsEngineHook {
 
         Currency currency = CoinsEngineAPI.getCurrency(currencyType);
         if (currency == null) {
-            plugin.getLogger().warning("Валюта '" + currencyType + "' не найдена в CoinsEngine");
+            if (plugin.isDebug()) plugin.getLogger().warning("Валюта '" + currencyType + "' не найдена в CoinsEngine");
             return currencyType;
         }
         return currency.getSymbol();
@@ -48,14 +47,14 @@ public class CoinsEngineHook {
             // Получаем валюту по ID
             Currency currency = CoinsEngineAPI.getCurrency(currencyType);
             if (currency == null) {
-                plugin.getLogger().warning("Валюта '" + currencyType + "' не найдена в CoinsEngine");
+                if (plugin.isDebug()) plugin.getLogger().warning("Валюта '" + currencyType + "' не найдена в CoinsEngine");
                 return false;
             }
 
             // Добавляем баланс игроку
             CoinsEngineAPI.addBalance(player, currency, amount);
 
-            plugin.getLogger().info("Выдано " + amount + " " + currency.getName() + " игроку " + player.getName());
+            if (plugin.isDebug()) plugin.getLogger().info("Выдано " + amount + " " + currency.getName() + " игроку " + player.getName());
             return true;
         } catch (Exception e) {
             plugin.getLogger().warning("Ошибка при выдаче валюты игроку " + player.getName() + ": " + e.getMessage());
