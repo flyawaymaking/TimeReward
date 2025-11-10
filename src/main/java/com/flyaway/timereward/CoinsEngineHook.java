@@ -5,7 +5,7 @@ import su.nightexpress.coinsengine.api.CoinsEngineAPI;
 import su.nightexpress.coinsengine.api.currency.Currency;
 
 public class CoinsEngineHook {
-    private TimeReward plugin;
+    private final TimeReward plugin;
     private boolean enabled = false;
 
     public CoinsEngineHook(TimeReward plugin) {
@@ -47,14 +47,16 @@ public class CoinsEngineHook {
             // Получаем валюту по ID
             Currency currency = CoinsEngineAPI.getCurrency(currencyType);
             if (currency == null) {
-                if (plugin.isDebug()) plugin.getLogger().warning("Валюта '" + currencyType + "' не найдена в CoinsEngine");
+                if (plugin.isDebug())
+                    plugin.getLogger().warning("Валюта '" + currencyType + "' не найдена в CoinsEngine");
                 return false;
             }
 
             // Добавляем баланс игроку
             CoinsEngineAPI.addBalance(player, currency, amount);
 
-            if (plugin.isDebug()) plugin.getLogger().info("Выдано " + amount + " " + currency.getName() + " игроку " + player.getName());
+            if (plugin.isDebug())
+                plugin.getLogger().info("Выдано " + amount + " " + currency.getName() + " игроку " + player.getName());
             return true;
         } catch (Exception e) {
             plugin.getLogger().warning("Ошибка при выдаче валюты игроку " + player.getName() + ": " + e.getMessage());

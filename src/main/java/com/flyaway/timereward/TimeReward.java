@@ -12,6 +12,7 @@ import org.bukkit.permissions.PermissionAttachmentInfo;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.Map;
 import java.util.HashMap;
@@ -47,10 +48,21 @@ public class TimeReward extends JavaPlugin {
             this.currencySymbol = currencySymbol;
         }
 
-        public long getRewardInterval() { return rewardInterval; }
-        public double getRewardDefault() { return rewardDefault; }
-        public String getCurrencyId() { return currencyId; }
-        public String getCurrencySymbol() { return currencySymbol; }
+        public long getRewardInterval() {
+            return rewardInterval;
+        }
+
+        public double getRewardDefault() {
+            return rewardDefault;
+        }
+
+        public String getCurrencyId() {
+            return currencyId;
+        }
+
+        public String getCurrencySymbol() {
+            return currencySymbol;
+        }
     }
 
     @Override
@@ -81,8 +93,8 @@ public class TimeReward extends JavaPlugin {
         playerListener.initializeOnlinePlayers();
 
         TimeRewardCommand commandExecutor = new TimeRewardCommand(this);
-        getCommand("timereward").setExecutor(commandExecutor);
-        getCommand("timereward").setTabCompleter(commandExecutor);
+        Objects.requireNonNull(getCommand("timereward")).setExecutor(commandExecutor);
+        Objects.requireNonNull(getCommand("timereward")).setTabCompleter(commandExecutor);
 
         startRewardTimer();
         startSaveTask();
@@ -117,11 +129,11 @@ public class TimeReward extends JavaPlugin {
         broadcastRewards = config.getBoolean("settings.broadcast-rewards", false);
         debug = config.getBoolean("debug", false);
         rewardMessage = ChatColor.translateAlternateColorCodes('&',
-            config.getString("messages.reward-message", "&aВы получили &6{amount} {currency} &aза время на сервере!"));
+                config.getString("messages.reward-message", "&aВы получили &6{amount} {currency} &aза время на сервере!"));
 
         currencyConfigs = new HashMap<>();
         if (config.contains("settings.currencies")) {
-            for (String currencyKey : config.getConfigurationSection("settings.currencies").getKeys(false)) {
+            for (String currencyKey : Objects.requireNonNull(config.getConfigurationSection("settings.currencies")).getKeys(false)) {
                 String path = "settings.currencies." + currencyKey + ".";
                 long interval = config.getLong(path + "reward-interval", 60);
                 double defaultValue = config.getDouble(path + "reward-default", 1.0);
@@ -139,8 +151,9 @@ public class TimeReward extends JavaPlugin {
     }
 
     public void reloadPluginConfig() {
-        reloadConfig();
+        savePlayersData();
         loadConfig();
+        dataConfig = YamlConfiguration.loadConfiguration(dataFile);
         getLogger().info("Конфигурация плагина перезагружена");
     }
 
@@ -263,7 +276,8 @@ public class TimeReward extends JavaPlugin {
                     try {
                         double value = Double.parseDouble(parts[2]);
                         if (value > maxAmount) maxAmount = value;
-                    } catch (NumberFormatException ignored) {}
+                    } catch (NumberFormatException ignored) {
+                    }
                 }
             }
         }
@@ -342,9 +356,9 @@ public class TimeReward extends JavaPlugin {
         }
 
         return new PlayerData(
-            dataConfig.getLong(basePath + "totalTime", 0),
-            dataConfig.getLong(basePath + "periodTime", 0),
-            lastRewardTimes
+                dataConfig.getLong(basePath + "totalTime", 0),
+                dataConfig.getLong(basePath + "periodTime", 0),
+                lastRewardTimes
         );
     }
 

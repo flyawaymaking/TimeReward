@@ -6,7 +6,7 @@ import java.util.Map;
 public class PlayerData {
     private long totalTime;
     private long periodTime;
-    private Map<String, Long> lastRewardTimes;
+    private final Map<String, Long> lastRewardTimes;
 
     public PlayerData(long totalTime, long periodTime, Map<String, Long> lastRewardTimes) {
         this.totalTime = totalTime;
