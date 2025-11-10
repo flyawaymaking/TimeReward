@@ -65,7 +65,8 @@ public class PlayerListener implements Listener {
         plugin.savePlayerData(playerId);
         plugin.removePlayerDataFromMemory(playerId);
 
-        if (plugin.isDebug()) plugin.getLogger().info("Данные сохранены и удалены из памяти для игрока: " + player.getName());
+        if (plugin.isDebug())
+            plugin.getLogger().info("Данные сохранены и удалены из памяти для игрока: " + player.getName());
     }
 
     // Метод для обновления времени сессии
@@ -98,13 +99,15 @@ public class PlayerListener implements Listener {
             if (joinTimes.containsKey(playerId)) {
                 updatePlayerSessionTime(playerId);
                 joinTimes.remove(playerId);
-                if (plugin.isDebug()) plugin.getLogger().info("Игрок " + player.getName() + " ушел в AFK, сессия сохранена");
+                if (plugin.isDebug())
+                    plugin.getLogger().info("Игрок " + player.getName() + " ушел в AFK, сессия сохранена");
             }
         } else {
             // Игрок вышел из AFK - добавляем в joinTimes только если онлайн
             if (player.isOnline() && !joinTimes.containsKey(playerId)) {
                 joinTimes.put(playerId, System.currentTimeMillis() / 1000);
-                if (plugin.isDebug()) plugin.getLogger().info("Игрок " + player.getName() + " вышел из AFK, сессия возобновлена");
+                if (plugin.isDebug())
+                    plugin.getLogger().info("Игрок " + player.getName() + " вышел из AFK, сессия возобновлена");
             }
         }
     }

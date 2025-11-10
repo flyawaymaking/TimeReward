@@ -16,9 +16,8 @@ import java.util.stream.Collectors;
 
 public class TimeRewardCommand implements CommandExecutor, TabCompleter {
     private final TimeReward plugin;
-    private final List<String> mainCommands = Arrays.asList("reload", "stats", "help");
     private final List<String> adminCommands = Arrays.asList("reload", "stats");
-    private final List<String> playerCommands = Arrays.asList("stats");
+    private final List<String> playerCommands = List.of("stats");
 
     public TimeRewardCommand(TimeReward plugin) {
         this.plugin = plugin;
@@ -121,7 +120,7 @@ public class TimeRewardCommand implements CommandExecutor, TabCompleter {
             CurrencyConfig currencyConfig = plugin.getCurrencyConfig(currency);
             String currencyName = currencyConfig != null ? currencyConfig.getCurrencySymbol() : currency;
             sender.sendMessage(ChatColor.GREEN + "Последняя награда " + currencyName + ": " +
-                             ChatColor.WHITE + formatTime(lastReward));
+                    ChatColor.WHITE + formatTime(lastReward));
         }
     }
 
