@@ -12,20 +12,17 @@ public class CoinsEngineHook {
         this.plugin = plugin;
     }
 
-    public boolean setupCoinsEngine() {
+    public void setupCoinsEngine() {
         try {
             if (plugin.getServer().getPluginManager().getPlugin("CoinsEngine") == null) {
                 plugin.getLogger().info("CoinsEngine не найден");
-                return false;
             }
 
             enabled = true;
             plugin.getLogger().info("Успешная интеграция с CoinsEngine API");
-            return true;
 
         } catch (Exception e) {
             plugin.getLogger().warning("Ошибка при подключении к CoinsEngine: " + e.getMessage());
-            return false;
         }
     }
 

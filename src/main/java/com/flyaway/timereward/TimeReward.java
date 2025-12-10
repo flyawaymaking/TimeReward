@@ -20,7 +20,7 @@ import java.util.HashMap;
 public class TimeReward extends JavaPlugin {
 
     private CoinsEngineHook coinsEngine;
-    private Map<UUID, PlayerData> playerDataMap;
+    private final Map<UUID, PlayerData> playerDataMap = new HashMap<>();;
     private File dataFile;
     private YamlConfiguration dataConfig;
     private Object essentials;
@@ -71,15 +71,14 @@ public class TimeReward extends JavaPlugin {
         setupDataFile();
 
         coinsEngine = new CoinsEngineHook(this);
-        if (!coinsEngine.setupCoinsEngine()) {
+        coinsEngine.setupCoinsEngine();
+        if (!coinsEngine.isEnabled()) {
             getLogger().severe("CoinsEngine не найден! Плагин будет отключен.");
             getServer().getPluginManager().disablePlugin(this);
             return;
         }
 
         loadConfig();
-
-        playerDataMap = new HashMap<>();
 
         essentials = getServer().getPluginManager().getPlugin("Essentials");
         if (essentials == null) {
