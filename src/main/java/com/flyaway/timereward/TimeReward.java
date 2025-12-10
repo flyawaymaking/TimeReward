@@ -16,11 +16,12 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class TimeReward extends JavaPlugin {
 
     private CoinsEngineHook coinsEngine;
-    private final Map<UUID, PlayerData> playerDataMap = new HashMap<>();;
+    private final Map<UUID, PlayerData> playerDataMap = new ConcurrentHashMap<>();
     private File dataFile;
     private YamlConfiguration dataConfig;
     private Object essentials;
