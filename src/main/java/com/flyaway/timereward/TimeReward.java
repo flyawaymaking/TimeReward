@@ -116,7 +116,16 @@ public class TimeReward extends JavaPlugin {
 
     private void setupDataFile() {
         dataFile = new File(getDataFolder(), "playerdata.yml");
-        if (!dataFile.exists()) saveResource("playerdata.yml", false);
+
+        if (!dataFile.exists()) {
+            try {
+                getDataFolder().mkdirs();
+                dataFile.createNewFile();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
         dataConfig = YamlConfiguration.loadConfiguration(dataFile);
     }
 
